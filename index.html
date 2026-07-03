@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Sáng Kiến Kho bạc Nhà nước</title>
+    <style>
+        /* ======================================================== */
+        /* 1. CSS DÙNG CHUNG CHO TOÀN HỆ THỐNG                      */
+        /* ======================================================== */
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; }
+        header { background-color: #1a73e8; color: white; padding: 15px 20px; text-align: center; }
+        
+        nav { background-color: #ffffff; display: flex; justify-content: center; border-bottom: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-wrap: wrap; }
+        nav button { background-color: inherit; border: none; outline: none; cursor: pointer; padding: 14px 20px; font-size: 16px; transition: 0.3s; }
+        nav button:hover { background-color: #e8f0fe; color: #1a73e8; }
+        nav button.active { border-bottom: 3px solid #1a73e8; color: #1a73e8; font-weight: bold; }
+        
+        .content-section { display: none; padding: 30px; max-width: 900px; margin: 20px auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .content-section.active { display: block; }
+        .text-danger { color: red; }
+
+        /* ======================================================== */
+        /* 2. CSS CHO TAB "ĐĂNG KÝ SÁNG KIẾN"                       */
+        /* ======================================================== */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; font-size: 14px; }
+        .form-group input[type="text"], .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; font-family: inherit; }
+        .form-group textarea { resize: vertical; height: 100px; }
+        
+        .section-title { color: #1a73e8; border-left: 4px solid #1a73e8; padding-left: 10px; margin-top: 30px; margin-bottom: 20px; font-size: 18px; font-weight: bold; display: flex; align-items: center; }
+        .author-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px 20px 0 20px; margin-bottom: 20px; background-color: #fafbfc; }
+        .author-card h4 { color: #1a73e8; margin-top: 0; margin-bottom: 15px; font-size: 15px; }
+        
+        .row { display: flex; gap: 20px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 220px; }
+        
+        .btn-submit { background-color: #1a73e8; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: background-color 0.2s; margin-top: 10px; }
+        .btn-submit:hover { background-color: #1557b0; }
+
+        /* ======================================================== */
+        /* 3. CSS CHO TAB "ĐƠN VỊ GỬI HỒ SƠ" (Tải tệp lên)          */
+        /* ======================================================== */
+        .alert-info { background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px 20px; border-radius: 4px; margin-bottom: 25px; }
+        .alert-info h4 { color: #1565c0; margin-top: 0; margin-bottom: 10px; font-size: 16px; }
+        .alert-info ul { margin: 0; padding-left: 20px; color: #333; font-size: 14.5px; line-height: 1.6; }
+        
+        .section-header-green { background-color: #e8f5e9; color: #2e7d32; padding: 12px 15px; font-weight: bold; font-size: 15px; border-top-left-radius: 6px; border-top-right-radius: 6px; border: 1px solid #c8e6c9; border-bottom: none; display: flex; align-items: center; }
+        .section-body { padding: 20px; border: 1px solid #c8e6c9; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; margin-bottom: 20px; }
+        .section-body select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; font-family: inherit; }
+        
+        .drop-zone { border: 2px dashed #b0bec5; border-radius: 8px; padding: 40px 20px; text-align: center; background-color: #fafbfc; cursor: pointer; transition: background-color 0.3s, border-color 0.3s; margin-bottom: 20px; }
+        .drop-zone:hover { background-color: #f1f8e9; border-color: #4caf50; }
+        .drop-zone-icon { font-size: 40px; color: #4caf50; margin-bottom: 10px; }
+        .drop-zone-text { font-size: 16px; font-weight: bold; color: #4caf50; margin-bottom: 8px; }
+        .drop-zone-subtext { font-size: 13px; color: #78909c; }
+        
+        .btn-success { background-color: #28a745; color: white; padding: 14px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: background-color 0.2s; }
+        .btn-success:hover { background-color: #218838; }
+		/* Nút Gửi đăng ký (Màu xanh nước biển nhạt) đồng bộ với style của btn-success */
+		.btn-primary { 
+			background-color: #0dcaf0; /* Xanh nhạt nước biển */
+			color: #000; /* Chữ màu đen để nổi bật trên nền sáng */
+			padding: 14px 20px; 
+			border: none; 
+			border-radius: 4px; 
+			cursor: pointer; 
+			font-size: 16px; 
+			font-weight: bold; 
+			width: 100%; 
+			transition: background-color 0.2s; 
+			margin-top: 15px;
+		}
+		.btn-primary:hover { 
+			background-color: #31d2f2; 
+			color: white;
+		}
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1> KHO BẠC NHÀ NƯỚC</h1>
+        <h1> HỆ THỐNG QUẢN LÝ SÁNG KIẾN</h1>
+    </header>
+
+    <nav>
+        <button class="tab-link" onclick="openTab(event, 'thong-ke')">Thống kê</button>
+        <button class="tab-link active" onclick="openTab(event, 'dang-ky')">Đăng ký sáng kiến</button>
+        <button class="tab-link" onclick="openTab(event, 'don-vi')">Đơn vị gửi hồ sơ</button>
+        <button class="tab-link" onclick="openTab(event, 'hoi-dong')">Hội đồng sáng kiến</button>
+        <button class="tab-link" onclick="openTab(event, 'to-giup-viec')">Tổ giúp việc</button>
+        <button class="tab-link" onclick="openTab(event, 'tai-lieu')">Tài liệu hệ thống</button>
+    </nav>
+
+    <div id="thong-ke" class="content-section">
+        <h2>Thống kê</h2>
+        <p>Phần hiển thị biểu đồ thống kê (Đang phát triển)...</p>
+    </div>
+
+    <!-- ================================================== -->
+    <!-- TAB 1: ĐĂNG KÝ SÁNG KIẾN (Bản đầy đủ)              -->
+    <!-- ================================================== -->
+    <div id="dang-ky" class="content-section active">
+        <h2>Đăng ký sáng kiến</h2>
+        <p style="color: #666; margin-bottom: 10px;">Vui lòng điền đầy đủ thông tin vào biểu mẫu dưới đây.</p>
+        
+        <form id="initiativeForm" onsubmit="handleInitiativeSubmit(event)">
+            
+            <div class="section-title">
+                &#128101; Thông tin Tác giả (Tối đa 3 người)
+            </div>
+
+            <!-- TÁC GIẢ 1 -->
+            <div class="author-card">
+                <h4>&#128100; Tác giả 1 (Bắt buộc)</h4>
+                <div class="row">
+                    <div class="col form-group">
+                        <label>Họ và tên <span class="text-danger">*</span></label>
+                        <input type="text" id="author1Name" required placeholder="Nguyễn Văn A">
+                    </div>
+                    <div class="col form-group">
+                        <label>Chức danh <span class="text-danger">*</span></label>
+                        <select id="author1Position" required>
+                            <option value="">-- Chọn chức danh --</option>
+                            <option value="Giám đốc">Giám đốc</option>
+                            <option value="Phó Giám đốc">Phó Giám đốc</option>
+                            <option value="Trưởng ban">Trưởng ban</option>
+                            <option value="Phó Trưởng ban">Phó Trưởng ban</option>
+                            <option value="Chuyên viên chính">Chuyên viên chính</option>
+                            <option value="Chuyên viên">Chuyên viên</option>
+                            <option value="Kế toán viên">Kế toán viên</option>
+                        </select>
+                    </div>
+                    <div class="col form-group">
+                        <label>Đơn vị công tác <span class="text-danger">*</span></label>
+                        <select id="author1Dept" required>
+                            <option value="">-- Chọn đơn vị --</option>
+                            <!-- Dữ liệu chuẩn từ file Excel -->
+                            <option value="Ban Lãnh đạo">Ban Lãnh đạo</option>
+                            <option value="Ban Chính sách - Pháp chế">Ban Chính sách - Pháp chế</option>
+                            <option value="Ban Quản lý hệ thống thanh toán">Ban Quản lý hệ thống thanh toán</option>
+                            <option value="Ban Công nghệ thông tin và Chuyển đổi số">Ban Công nghệ thông tin và Chuyển đổi số</option>
+                            <option value="Ban Giao dịch">Ban Giao dịch</option>
+                            <option value="Ban Kiểm tra, Kiểm toán nội bộ">Ban Kiểm tra, Kiểm toán nội bộ</option>
+                            <option value="Ban Tổ chức cán bộ">Ban Tổ chức cán bộ</option>
+                            <option value="Ban Tài vụ - Quản trị">Ban Tài vụ - Quản trị</option>
+                            <option value="Văn phòng">Văn phòng</option>
+                            <option value="Ban Kế toán Nhà nước">Ban Kế toán Nhà nước</option>
+                            <option value="Ban Quản lý ngân quỹ">Ban Quản lý ngân quỹ</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TÁC GIẢ 2 -->
+            <div class="author-card">
+                <h4>&#128100; Tác giả 2 (Không bắt buộc)</h4>
+                <div class="row">
+                    <div class="col form-group">
+                        <label>Họ và tên</label>
+                        <input type="text" id="author2Name" placeholder="Trần Thị B">
+                    </div>
+                    <div class="col form-group">
+                        <label>Chức danh</label>
+                        <select id="author2Position">
+                            <option value="">-- Chọn chức danh --</option>
+                            <option value="Giám đốc">Giám đốc</option>
+                            <option value="Phó Giám đốc">Phó Giám đốc</option>
+                            <option value="Trưởng ban">Trưởng ban</option>
+                            <option value="Phó Trưởng ban">Phó Trưởng ban</option>
+                            <option value="Chuyên viên chính">Chuyên viên chính</option>
+                            <option value="Chuyên viên">Chuyên viên</option>
+                            <option value="Kế toán viên">Kế toán viên</option>
+                        </select>
+                    </div>
+                    <div class="col form-group">
+                        <label>Đơn vị công tác</label>
+                        <select id="author2Dept">
+                            <option value="">-- Chọn đơn vị --</option>
+                            <option value="Ban Chính sách - Pháp chế">Ban Chính sách - Pháp chế</option>
+                            <option value="Ban Quản lý hệ thống thanh toán">Ban Quản lý hệ thống thanh toán</option>
+                            <option value="Ban Công nghệ thông tin và Chuyển đổi số">Ban Công nghệ thông tin và Chuyển đổi số</option>
+                            <option value="Ban Giao dịch">Ban Giao dịch</option>
+                            <option value="Ban Kiểm tra - Kiểm toán nội bộ">Ban Kiểm tra - Kiểm toán nội bộ</option>
+                            <option value="Ban Tổ chức cán bộ">Ban Tổ chức cán bộ</option>
+                            <option value="Ban Tài vụ - Quản trị">Ban Tài vụ - Quản trị</option>
+                            <option value="Văn phòng">Văn phòng</option>
+                            <option value="Ban Kế toán Nhà nước">Ban Kế toán Nhà nước</option>
+                            <option value="Ban Quản lý ngân quỹ">Ban Quản lý ngân quỹ</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TÁC GIẢ 3 -->
+            <div class="author-card">
+                <h4>&#128100; Tác giả 3 (Không bắt buộc)</h4>
+                <div class="row">
+                    <div class="col form-group">
+                        <label>Họ và tên</label>
+                        <input type="text" id="author3Name" placeholder="Lê Văn C">
+                    </div>
+                    <div class="col form-group">
+                        <label>Chức danh</label>
+                        <select id="author3Position">
+                            <option value="">-- Chọn chức danh --</option>
+                            <option value="Giám đốc">Giám đốc</option>
+                            <option value="Phó Giám đốc">Phó Giám đốc</option>
+                            <option value="Trưởng ban">Trưởng ban</option>
+                            <option value="Phó Trưởng ban">Phó Trưởng ban</option>
+                            <option value="Chuyên viên chính">Chuyên viên chính</option>
+                            <option value="Chuyên viên">Chuyên viên</option>
+                            <option value="Kế toán viên">Kế toán viên</option>
+                        </select>
+                    </div>
+                    <div class="col form-group">
+                        <label>Đơn vị công tác</label>
+                        <select id="author3Dept">
+                            <option value="">-- Chọn đơn vị --</option>
+                            <option value="Ban Chính sách - Pháp chế">Ban Chính sách - Pháp chế</option>
+                            <option value="Ban Quản lý hệ thống thanh toán">Ban Quản lý hệ thống thanh toán</option>
+                            <option value="Ban Công nghệ thông tin và Chuyển đổi số">Ban Công nghệ thông tin và Chuyển đổi số</option>
+                            <option value="Ban Giao dịch">Ban Giao dịch</option>
+                            <option value="Ban Kiểm tra - Kiểm toán nội bộ">Ban Kiểm tra - Kiểm toán nội bộ</option>
+                            <option value="Ban Tổ chức cán bộ">Ban Tổ chức cán bộ</option>
+                            <option value="Ban Tài vụ - Quản trị">Ban Tài vụ - Quản trị</option>
+                            <option value="Văn phòng">Văn phòng</option>
+                            <option value="Ban Kế toán Nhà nước">Ban Kế toán Nhà nước</option>
+                            <option value="Ban Quản lý ngân quỹ">Ban Quản lý ngân quỹ</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- THÊM MỚI 1: Thông tin Liên hệ -->
+            <div class="section-title">
+                ✉ Thông tin Liên hệ
+            </div>
+            <div class="form-group">
+                 <label for="contactEmail">Email liên hệ <span class="text-danger">*</span></label>
+                 <input type="email" id="contactEmail" required placeholder="Ví dụ: email@gmail.com">
+            </div>
+            
+            <div class="section-title">
+                &#128221; Nội dung Sáng kiến
+            </div>
+
+            <div class="form-group">
+                <label for="title">Tên sáng kiến: <span class="text-danger">*</span></label>
+                <input type="text" id="title" required placeholder="Nhập tên giống như trong Báo cáo mô tả sáng kiến">
+            </div>
+            
+            <div class="form-group">
+                <label for="fieldOfApplication">Lĩnh vực áp dụng: <span class="text-danger">*</span></label>
+                <input type="text" id="fieldOfApplication" required placeholder="Nhập lĩnh vực áp dụng của sáng kiến">
+            </div>
+
+            <div class="form-group">
+                <label for="recognitionLevel">Sáng kiến đề nghị xét công nhận: <span class="text-danger">*</span></label>
+                <select id="recognitionLevel" required>
+                    <option value="">-- Chọn đề nghị xét công nhận --</option>
+                    <option value="Trong Kho bạc Nhà nước">Trong Kho bạc Nhà nước</option>
+                    <option value="Trong Bộ Tài chính">Trong Bộ Tài chính</option>
+                    <option value="Trong Toàn quốc">Trong Toàn quốc</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="currentStatus">Thực trạng trước khi cải tiến: <span class="text-danger">*</span></label>
+                <textarea id="currentStatus" required placeholder="Mô tả những khó khăn, vướng mắc hoặc bất cập hiện tại..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="solution">Nội dung sáng kiến (Giải pháp mới): <span class="text-danger">*</span></label>
+                <textarea id="solution" required placeholder="Mô tả chi tiết giải pháp của bạn, quy trình mới thực hiện ra sao..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="benefit">Hiệu quả mang lại: <span class="text-danger">*</span></label>
+                <textarea id="benefit" required placeholder="Giải pháp này giúp tiết kiệm bao nhiêu thời gian, công sức hoặc chi phí?..."></textarea>
+            </div>
+            
+            <!-- THÊM MỚI 2: Tài liệu đính kèm -->
+            <div class="section-title">&#128206; Tài liệu đính kèm</div>
+            <div class="form-group">
+                <label>File đính kèm <span class="text-danger">*</span></label>
+                <!-- Drop-zone màu xanh dương cho form Đăng ký -->
+                <div class="drop-zone drop-zone-blue" onclick="document.getElementById('regFileInput').click()">
+                    <div class="drop-zone-icon">&#11014;</div>
+                    <div class="drop-zone-text">Chọn hoặc kéo thả tài liệu</div>
+                    <div class="drop-zone-subtext">PDF, Word, Excel, Zip, Rar (Tối đa 100MB)</div>
+                    <input type="file" id="regFileInput" multiple required style="display: none;" onchange="showRegSelectedFiles()">
+                </div>
+                <div id="regFileList" style="margin-bottom: 20px; color: #555; font-size: 14px;"></div>
+            </div>
+            
+            <button type="submit" class="btn-primary">&#10148; Gửi Đăng ký</button>
+        </form>
+    </div>
+            <button type="submit" class="btn-submit">Gửi Đăng Ký Sáng Kiến</button>
+        </form>
+    </div>
+
+    <!-- ================================================== -->
+    <!-- TAB 2: ĐƠN VỊ GỬI HỒ SƠ (Form tải tệp lên)           -->
+    <!-- ================================================== -->
+    <div id="don-vi" class="content-section">
+        
+        <div class="alert-info">
+            <h4>&#8505; Hồ sơ đơn vị gửi gồm:</h4>
+            <ul>
+                <li>Tờ trình đề nghị của đơn vị (Mẫu số 01)</li>
+                <li>Danh sách và tóm tắt (Mẫu số 02)</li>
+            </ul>
+        </div>
+
+        <form id="uploadDossierForm" onsubmit="handleUploadSubmit(event)">
+            
+            <div class="section-header-green">
+                &#127970; Thông tin Đơn vị &nbsp;<span class="text-danger">*</span>
+            </div>
+            <div class="section-body">
+                <select id="unitSelect" required>
+                    <option value="">-- Chọn đơn vị --</option>
+                    <!-- Đồng bộ dữ liệu chuẩn từ file Excel -->
+                    <option value="Ban Chính sách - Pháp chế">Ban Chính sách - Pháp chế</option>
+                    <option value="Ban Quản lý hệ thống thanh toán">Ban Quản lý hệ thống thanh toán</option>
+                    <option value="Ban Công nghệ thông tin và Chuyển đổi số">Ban Công nghệ thông tin và Chuyển đổi số</option>
+                    <option value="Ban Giao dịch">Ban Giao dịch</option>
+                    <option value="Ban Kiểm tra - Kiểm toán nội bộ">Ban Kiểm tra - Kiểm toán nội bộ</option>
+                    <option value="Ban Tổ chức cán bộ">Ban Tổ chức cán bộ</option>
+                    <option value="Ban Tài vụ - Quản trị">Ban Tài vụ - Quản trị</option>
+                    <option value="Văn phòng">Văn phòng</option>
+                    <option value="Ban Kế toán Nhà nước">Ban Kế toán Nhà nước</option>
+                    <option value="Ban Quản lý ngân quỹ">Ban Quản lý ngân quỹ</option>
+                </select>
+            </div>
+
+            <div class="section-header-green">
+                &#9615; Tải lên Hồ sơ
+            </div>
+            <div class="section-body" style="padding-bottom: 0; border: none;">
+                
+                <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
+                    <div class="drop-zone-icon">&#11014;</div>
+                    <div class="drop-zone-text">Kéo thả file vào đây hoặc click để chọn</div>
+                    <div class="drop-zone-subtext">Hỗ trợ: PDF, Word, Excel, PowerPoint, Zip, Rar (Tối đa 100MB/file)</div>
+                    <input type="file" id="fileInput" multiple style="display: none;" onchange="showSelectedFiles()">
+                </div>
+                
+                <div id="fileList" style="margin-bottom: 20px; color: #555; font-size: 14px;"></div>
+
+                <button type="submit" class="btn-success">&#10148; Gửi Hồ sơ</button>
+
+            </div>
+        </form>
+
+    </div>
+    
+    <!-- Các tab còn lại (Giữ nguyên dạng chờ phát triển) -->
+    <div id="hoi-dong" class="content-section">
+        <h2>Hội đồng sáng kiến</h2>
+        <p>Danh sách các thành viên hội đồng và nhận xét đánh giá.</p>
+    </div>
+
+    <div id="to-giup-viec" class="content-section">
+        <h2>Tổ giúp việc</h2>
+        <p>Thông tin và nhiệm vụ của tổ giúp việc.</p>
+    </div>
+
+    <div id="tai-lieu" class="content-section">
+        <h2>Tài liệu hệ thống</h2>
+        <p>Nơi lưu trữ các văn bản, hướng dẫn sử dụng phần mềm.</p>
+    </div>
+
+    <script>
+        // 1. Hàm chuyển đổi qua lại giữa các menu
+        function openTab(evt, tabName) {
+            let contentSections = document.getElementsByClassName("content-section");
+            for (let i = 0; i < contentSections.length; i++) {
+                contentSections[i].classList.remove("active");
+            }
+
+            let tabLinks = document.getElementsByClassName("tab-link");
+            for (let i = 0; i < tabLinks.length; i++) {
+                tabLinks[i].classList.remove("active");
+            }
+
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        // 2. Xử lý lưu form Đăng ký Sáng kiến
+        function handleInitiativeSubmit(event) {
+            event.preventDefault(); 
+            let title = document.getElementById("title").value;
+            alert("Chúc mừng! Đăng ký sáng kiến '" + title + "' đã được lưu trữ thành công!");
+            document.getElementById("initiativeForm").reset();
+            window.scrollTo(0, 0);
+        }
+
+        // 3. Hiển thị tên file khi người dùng chọn ở tab Đơn vị gửi hồ sơ
+        function showSelectedFiles() {
+            let fileInput = document.getElementById("fileInput");
+            let fileListDiv = document.getElementById("fileList");
+            fileListDiv.innerHTML = ""; 
+
+            if (fileInput.files.length > 0) {
+                fileListDiv.innerHTML = "<strong>File đã chọn:</strong><br>";
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    fileListDiv.innerHTML += "- " + fileInput.files[i].name + "<br>";
+                }
+            }
+        }
+
+        // 4. Xử lý Gửi tệp ở tab Đơn vị gửi hồ sơ
+        function handleUploadSubmit(event) {
+            event.preventDefault(); 
+            let unit = document.getElementById("unitSelect").value;
+            let files = document.getElementById("fileInput").files;
+
+            if (files.length === 0) {
+                alert("Vui lòng chọn ít nhất 1 file hồ sơ trước khi gửi!");
+                return;
+            }
+
+            alert("Đã tải lên thành công " + files.length + " file hồ sơ cho đơn vị: " + unit);
+            document.getElementById("uploadDossierForm").reset();
+            document.getElementById("fileList").innerHTML = "";
+        }
+    </script>
+
+</body>
+</html>
