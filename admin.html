@@ -39,6 +39,9 @@
         
         .btn-download { background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; }
         .btn-download:hover { background: #138496; }
+        /* THÊM MỚI CSS CHO NÚT KẾT XUẤT */
+        .btn-export { background: #ff9800; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-export:hover { background: #e68a00; }
         .btn-action { color: white; border: none; padding: 5px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-bottom: 4px; width: 100%; box-sizing: border-box;}
         .btn-approve { background: #28a745; }
         .btn-approve:hover { background: #218838; }
@@ -86,6 +89,8 @@
                 <!-- Thêm các đơn vị khác nếu cần -->
             </select>
             <button class="btn-search" onclick="loadData()">Tra cứu</button>
+            <!-- THÊM MỚI NÚT KẾT XUẤT DỮ LIỆU Ở ĐÂY -->
+            <button class="btn-export" onclick="exportToCSV()">Kết xuất dữ liệu</button>
         </div>
 
         <div id="loadingMsg" class="loading">Đang tải dữ liệu...</div>
@@ -129,6 +134,8 @@
         const dataTableBody = document.getElementById('dataTableBody');
         const loadingMsg = document.getElementById('loadingMsg');
         const loginError = document.getElementById('loginError');
+        // BIẾN LƯU DỮ LIỆU ĐANG HIỂN THỊ TRÊN MÀN HÌNH
+        let currentDisplayData = [];
 
         checkSession();
 
@@ -210,6 +217,8 @@
                 alert("Lỗi khi tải dữ liệu: " + error.message);
                 return;
             }
+            // GÁN DỮ LIỆU ĐÃ LỌC VÀO BIẾN ĐỂ SẴN SÀNG KẾT XUẤT
+            currentDisplayData = data;
 
             if (data.length === 0) {
                 dataTableBody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 20px;">Không tìm thấy dữ liệu sáng kiến nào.</td></tr>`;
@@ -292,6 +301,64 @@
                 console.error('Lỗi tải file:', error);
                 alert("Không thể tải file: " + error.message);
             }
+        }
+
+        // === 6. XỬ LÝ KẾT XUẤT DỮ LIỆU RA CSV ===
+        function exportToCSV() {
+            if (!currentDisplayData || currentDisplayData.length === 0) {
+                alert("Không có dữ liệu trên màn hình để kết xuất!");
+                return;
+            }
+
+            // Thêm ký tự BOM (\uFEFF) để Excel nhận diện đúng tiếng Việt UTF-8
+            let csvContent = "\uFEFF";
+            
+            // 1. Tạo dòng Tiêu đề
+            const headers = ["STT", "Tên Sáng kiến", "Đại diện Tác giả", "Đơn vị", "Chức vụ", "Lĩnh vực", "Cấp đề nghị", "Thực trạng", "Giải pháp mới", "Hiệu quả", "Trạng thái"];
+            csvContent += headers.join(",") + "\r\n";
+
+            // Hàm bọc dấu ngoặc kép và xử lý dấu phẩy/xuống dòng trong nội dung
+            const escapeCSV = (str) => {
+                if (str === null || str === undefined) return '""';
+                const strVal = String(str);
+                // Thay thế dấu " bên trong chuỗi thành "" để Excel không bị lỗi
+                return '"' + strVal.replace(/"/g, '""') + '"';
+            };
+
+            // 2. Tạo nội dung các dòng dữ liệu (Dựa vào mảng đã lọc)
+            currentDisplayData.forEach((row, index) => {
+                const rowData = [
+                    index + 1,
+                    escapeCSV(row.ten_sang_kien),
+                    escapeCSV(row.tg1_ho_ten),
+                    escapeCSV(row.tg1_don_vi),
+                    escapeCSV(row.tg1_chuc_danh),
+                    escapeCSV(row.linh_vuc_ap_dung),
+                    escapeCSV(row.cap_de_nghi),
+                    escapeCSV(row.thuc_trang),
+                    escapeCSV(row.giai_phap),
+                    escapeCSV(row.hieu_qua),
+                    escapeCSV(row.trang_thai || 'Chờ duyệt')
+                ];
+                csvContent += rowData.join(",") + "\r\n";
+            });
+
+            // 3. Tạo file và ép trình duyệt tải xuống
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            
+            // Tên file lấy theo ngày giờ hiện tại
+            const dateStr = new Date().toISOString().slice(0, 10);
+            a.download = `Danh_Sach_Sang_Kien_${dateStr}.csv`;
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // Dọn dẹp
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
