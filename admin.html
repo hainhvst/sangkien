@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Ép trình duyệt không lưu cache để code mới cập nhật nhanh hơn -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <title>KBNN - Quản trị Hệ thống Sáng kiến</title>
-    <!-- Nhúng thư viện Supabase JS từ CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
         header { background-color: #1a73e8; color: white; padding: 15px 20px; text-align: center; position: relative; }
-        .logout-btn { position: absolute; right: 20px; top: 20px; background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; display: none; }
+        .logout-btn { position: absolute; right: 20px; top: 20px; background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; display: none; font-weight: bold; }
         .logout-btn:hover { background: #c82333; }
         
         /* Container Đăng nhập */
@@ -20,35 +24,40 @@
         .btn-login { width: 100%; background: #1a73e8; color: white; border: none; padding: 12px; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .btn-login:hover { background: #1557b0; }
 
-        /* Container Bảng điều khiển (Dashboard) */
-        #dashboardContainer { display: none; max-width: 1200px; margin: 30px auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .filter-bar { display: flex; gap: 15px; margin-bottom: 20px; }
-        .filter-bar input, .filter-bar select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; }
-        .btn-search { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        /* Container Bảng điều khiển - Mở rộng tối đa màn hình */
+        #dashboardContainer { display: none; width: 98%; max-width: 1800px; margin: 20px auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); box-sizing: border-box; }
+        .filter-bar { display: flex; gap: 15px; margin-bottom: 20px; max-width: 800px; }
+        .filter-bar input, .filter-bar select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; flex: 1; font-size: 14px;}
+        .btn-search { background: #28a745; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-search:hover { background: #218838; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; border: 1px solid #dee2e6; text-align: left; }
-        th { background-color: #f8f9fa; color: #333; }
-        .btn-download { background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; }
-        .btn-download:hover { background: #138496; }
+        /* Cấu trúc Bảng dữ liệu */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; min-width: 1400px; }
+        th, td { padding: 10px 8px; border: 1px solid #dee2e6; text-align: left; vertical-align: middle; line-height: 1.4; }
+        th { background-color: #f8f9fa; color: #333; position: sticky; top: 0; z-index: 1;}
         
-        .loading { text-align: center; font-style: italic; color: #666; display: none; }
+        .btn-download { background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+        .btn-download:hover { background: #138496; }
+        .btn-action { color: white; border: none; padding: 5px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-bottom: 4px; width: 100%; box-sizing: border-box;}
+        .btn-approve { background: #28a745; }
+        .btn-approve:hover { background: #218838; }
+        .btn-reject { background: #dc3545; margin-bottom: 0;}
+        .btn-reject:hover { background: #c82333; }
+        
+        .loading { text-align: center; font-style: italic; color: #666; display: none; padding: 20px; }
     </style>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
 </head>
-    
 <body>
+
     <header>
-        <h1>TRANG QUẢN TRỊ SÁNG KIẾN KBNN</h1>
+        <h1 style="margin: 0; font-size: 24px;">TRANG QUẢN TRỊ SÁNG KIẾN KBNN</h1>
         <button id="btnLogout" class="logout-btn" onclick="handleLogout()">Đăng xuất</button>
     </header>
 
     <!-- MÀN HÌNH ĐĂNG NHẬP -->
     <div id="loginContainer">
-        <h2 style="text-align: center; color: #1a73e8; margin-top: 0;">Admin Login</h2>
+        <h2 style="text-align: center; color: #1a73e8; margin-top: 0;">Đăng nhập Hệ thống</h2>
         <div id="loginError" style="color: red; margin-bottom: 15px; font-size: 14px; text-align: center; display: none;"></div>
         <form onsubmit="handleLogin(event)">
             <div class="form-group">
@@ -63,12 +72,12 @@
         </form>
     </div>
 
-    <!-- MÀN HÌNH QUẢN TRỊ (Ẩn mặc định) -->
+    <!-- MÀN HÌNH QUẢN TRỊ -->
     <div id="dashboardContainer">
-        <h2>Danh sách Đăng ký Sáng kiến</h2>
+        <h2 style="margin-top: 0; color: #333;">Danh sách Đăng ký Sáng kiến</h2>
         
         <div class="filter-bar">
-            <input type="text" id="searchKeyword" placeholder="Tìm theo tên sáng kiến hoặc tác giả...">
+            <input type="text" id="searchKeyword" placeholder="Tìm tên sáng kiến, tác giả...">
             <select id="filterDept">
                 <option value="">-- Tất cả đơn vị --</option>
                 <option value="Ban Công nghệ thông tin và Chuyển đổi số">Ban Công nghệ thông tin và Chuyển đổi số</option>
@@ -76,48 +85,53 @@
                 <option value="Văn phòng">Văn phòng</option>
                 <!-- Thêm các đơn vị khác nếu cần -->
             </select>
-            <button class="btn-search" onclick="loadData()">Lọc Dữ liệu</button>
+            <button class="btn-search" onclick="loadData()">Tra cứu</button>
         </div>
 
         <div id="loadingMsg" class="loading">Đang tải dữ liệu...</div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th width="5%">STT</th>
-                    <th width="25%">Tên Sáng kiến</th>
-                    <th width="15%">Đại diện Tác giả</th>
-                    <th width="20%">Đơn vị</th>
-                    <th width="10%">Chức vụ</th>
-                    <th width="15%">Trạng thái</th>
-                    <th width="10%" style="text-align: center;">Tài liệu</th>
-                </tr>
-            </thead>
-            <tbody id="dataTableBody">
-                <!-- Dữ liệu sẽ được render bằng JS vào đây -->
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th width="3%" style="text-align: center;">STT</th>
+                        <th width="12%">Tên Sáng kiến</th>
+                        <th width="8%">Đại diện Tác giả</th>
+                        <th width="7%">Đơn vị</th>
+                        <th width="7%">Chức vụ</th>
+                        <th width="8%">Lĩnh vực</th>
+                        <th width="8%">Cấp đề nghị</th>
+                        <th width="12%">Thực trạng</th>
+                        <th width="12%">Giải pháp mới</th>
+                        <th width="12%">Hiệu quả</th>
+                        <th width="6%" style="text-align: center;">Trạng thái</th>
+                        <th width="6%" style="text-align: center;">Tài liệu</th>
+                        <th width="5%" style="text-align: center;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTableBody">
+                    <!-- Dữ liệu render bằng JS -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
         // === 1. KHỞI TẠO SUPABASE ===
-        const SUPABASE_URL = 'https://vogkouunfpjyvyfhxduz.supabase.co'; // ĐIỀN URL CỦA BẠN
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvZ2tvdXVuZnBqeXZ5Zmh4ZHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTY4MTgsImV4cCI6MjA5NTAzMjgxOH0.cV_TlEdF3a9HbBwaWnYujQ6GFbK4ZdRJhbyabhFSnKY'; // ĐIỀN ANON KEY CỦA BẠN
+        const SUPABASE_URL = 'https://vogkouunfpjyvyfhxduz.supabase.co'; // Giữ đúng URL của bạn
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvZ2tvdXVuZnBqeXZ5Zmh4ZHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTY4MTgsImV4cCI6MjA5NTAzMjgxOH0.cV_TlEdF3a9HbBwaWnYujQ6GFbK4ZdRJhbyabhFSnKY'; // Giữ đúng Key của bạn
         
-        // ĐỔI TÊN BIẾN THÀNH 'supabaseClient'
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-        // UI Elements
+
         const loginContainer = document.getElementById('loginContainer');
         const dashboardContainer = document.getElementById('dashboardContainer');
         const btnLogout = document.getElementById('btnLogout');
         const dataTableBody = document.getElementById('dataTableBody');
         const loadingMsg = document.getElementById('loadingMsg');
         const loginError = document.getElementById('loginError');
-    
-        // Kiểm tra phiên đăng nhập ngay khi mở trang
+
         checkSession();
-    
+
         async function checkSession() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
@@ -126,8 +140,7 @@
                 showLogin();
             }
         }
-    
-        // === 2. XỬ LÝ ĐĂNG NHẬP / ĐĂNG XUẤT ===
+
         async function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('email').value;
@@ -137,12 +150,12 @@
             btnSubmit.innerText = "Đang xử lý...";
             btnSubmit.disabled = true;
             loginError.style.display = 'none';
-    
+
             const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
-    
+
             if (error) {
                 loginError.innerText = "Đăng nhập thất bại: " + error.message;
                 loginError.style.display = 'block';
@@ -152,113 +165,120 @@
                 showDashboard();
             }
         }
-    
+
         async function handleLogout() {
             await supabaseClient.auth.signOut();
             showLogin();
         }
-    
+
         function showLogin() {
             loginContainer.style.display = 'block';
             dashboardContainer.style.display = 'none';
             btnLogout.style.display = 'none';
         }
-    
+
         function showDashboard() {
             loginContainer.style.display = 'none';
             dashboardContainer.style.display = 'block';
             btnLogout.style.display = 'block';
-            loadData(); // Tải dữ liệu bảng khi vào dashboard
+            loadData(); 
         }
-    
-        // === 3. LẤY DỮ LIỆU & RENDER BẢNG ===
+        
+        // Hàm rút gọn chữ thông minh cho các cột dài
+        function truncateText(text, maxLength) {
+            if (!text) return 'N/A';
+            return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+        }
+
+        // === 3. LẤY DỮ LIỆU & RENDER BẢNG CHUẨN XÁC ===
         async function loadData() {
             loadingMsg.style.display = 'block';
             dataTableBody.innerHTML = "";
-    
+
             const keyword = document.getElementById('searchKeyword').value;
             const dept = document.getElementById('filterDept').value;
-    
-            // Dùng supabaseClient thay cho supabase
+
             let query = supabaseClient.from('dang_ky_sang_kien').select('*').order('created_at', { ascending: false });
-    
+
             if (dept) query = query.eq('tg1_don_vi', dept);
             if (keyword) query = query.or(`ten_sang_kien.ilike.%${keyword}%,tg1_ho_ten.ilike.%${keyword}%`);
-    
+
             const { data, error } = await query;
             loadingMsg.style.display = 'none';
-    
+
             if (error) {
                 alert("Lỗi khi tải dữ liệu: " + error.message);
                 return;
             }
-    
+
             if (data.length === 0) {
-                dataTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center;">Không có dữ liệu</td></tr>`;
+                dataTableBody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 20px;">Không tìm thấy dữ liệu sáng kiến nào.</td></tr>`;
                 return;
             }
-    
+
             data.forEach((row, index) => {
                 const tr = document.createElement('tr');
                 
-                let fileHTML = '<i>Không có file</i>';
+                let fileHTML = '<i style="color: #999;">Không có</i>';
                 if (row.file_dinh_kem && row.file_dinh_kem.length > 0) {
                     const filePath = row.file_dinh_kem[0];
-                    fileHTML = `<button class="btn-download" onclick="downloadFile('${filePath}')">&#11119; Tải xuống</button>`;
+                    fileHTML = `<button class="btn-download" onclick="downloadFile('${filePath}')">&#11119; Tải về</button>`;
                 }
-    
-                // Đổi màu chữ theo trạng thái
+
                 let statusColor = 'orange';
                 if (row.trang_thai === 'Đã duyệt') statusColor = 'green';
                 if (row.trang_thai === 'Từ chối') statusColor = 'red';
-    
-                // Thêm cột Thao tác (Nút Duyệt / Từ chối)
+
+                // Đã chèn đầy đủ 13 cột khớp hoàn toàn với thẻ thead
                 tr.innerHTML = `
-                    <td>${index + 1}</td>
+                    <td style="text-align: center;">${index + 1}</td>
                     <td><strong>${row.ten_sang_kien || 'N/A'}</strong></td>
                     <td>${row.tg1_ho_ten || 'N/A'}</td>
                     <td>${row.tg1_don_vi || 'N/A'}</td>
-                    <td><span style="color: ${statusColor}; font-weight: bold;">${row.trang_thai || 'Chờ duyệt'}</span></td>
+                    <td>${row.tg1_chuc_danh || 'N/A'}</td>
+                    <td>${row.linh_vuc_ap_dung || 'N/A'}</td>
+                    <td>${row.cap_de_nghi || 'N/A'}</td>
+                    <td title="${row.thuc_trang || ''}">${truncateText(row.thuc_trang, 45)}</td>
+                    <td title="${row.giai_phap || ''}">${truncateText(row.giai_phap, 45)}</td>
+                    <td title="${row.hieu_qua || ''}">${truncateText(row.hieu_qua, 45)}</td>
+                    <td style="text-align: center;"><span style="color: ${statusColor}; font-weight: bold;">${row.trang_thai || 'Chờ duyệt'}</span></td>
                     <td style="text-align: center;">${fileHTML}</td>
                     <td style="text-align: center;">
-                        <button onclick="updateStatus('${row.id}', 'Đã duyệt')" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-bottom: 4px; width: 70px;">Duyệt</button><br>
-                        <button onclick="updateStatus('${row.id}', 'Từ chối')" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; width: 70px;">Từ chối</button>
+                        <button onclick="updateStatus('${row.id}', 'Đã duyệt')" class="btn-action btn-approve">Duyệt</button>
+                        <button onclick="updateStatus('${row.id}', 'Từ chối')" class="btn-action btn-reject">Từ chối</button>
                     </td>
                 `;
                 dataTableBody.appendChild(tr);
             });
         }
-    
+
         // === 4. CẬP NHẬT TRẠNG THÁI ===
         async function updateStatus(id, newStatus) {
             if (!confirm(`Bạn có chắc chắn muốn chuyển hồ sơ này sang trạng thái: ${newStatus}?`)) {
                 return;
             }
-    
-            // Dùng supabaseClient thay cho supabase
+
             const { error } = await supabaseClient
                 .from('dang_ky_sang_kien')
                 .update({ trang_thai: newStatus })
                 .eq('id', id);
-    
+
             if (error) {
                 alert("❌ Lỗi khi cập nhật: " + error.message);
             } else {
-                alert("✅ Đã cập nhật trạng thái thành công!");
                 loadData(); // Tải lại bảng để thấy kết quả ngay
             }
         }
-    
+
         // === 5. XỬ LÝ TẢI FILE DẠNG BLOB ===
         async function downloadFile(filePath) {
             try {
-                // Dùng supabaseClient thay cho supabase
                 const { data, error } = await supabaseClient.storage
                     .from('sang_kien_bucket')
                     .download(filePath);
-    
+
                 if (error) throw error;
-    
+
                 const blobUrl = URL.createObjectURL(data);
                 const a = document.createElement('a');
                 a.href = blobUrl;
