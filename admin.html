@@ -35,6 +35,9 @@
         
         .loading { text-align: center; font-style: italic; color: #666; display: none; }
     </style>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
 </head>
 <body>
 
@@ -98,10 +101,12 @@
 
     <script>
         // === 1. KHỞI TẠO SUPABASE ===
-        const SUPABASE_URL = 'https://vogkouunfpjyvyfhxduz.supabase.co'; // THAY URL CỦA BẠN
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvZ2tvdXVuZnBqeXZ5Zmh4ZHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTY4MTgsImV4cCI6MjA5NTAzMjgxOH0.cV_TlEdF3a9HbBwaWnYujQ6GFbK4ZdRJhbyabhFSnKY'; // THAY ANON KEY CỦA BẠN
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+        const SUPABASE_URL = 'https://vogkouunfpjyvyfhxduz.supabase.co'; // ĐIỀN URL CỦA BẠN
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvZ2tvdXVuZnBqeXZ5Zmh4ZHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTY4MTgsImV4cCI6MjA5NTAzMjgxOH0.cV_TlEdF3a9HbBwaWnYujQ6GFbK4ZdRJhbyabhFSnKY'; // ĐIỀN ANON KEY CỦA BẠN
+        
+        // ĐỔI TÊN BIẾN THÀNH 'supabaseClient'
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
         // UI Elements
         const loginContainer = document.getElementById('loginContainer');
         const dashboardContainer = document.getElementById('dashboardContainer');
@@ -109,19 +114,19 @@
         const dataTableBody = document.getElementById('dataTableBody');
         const loadingMsg = document.getElementById('loadingMsg');
         const loginError = document.getElementById('loginError');
-
+    
         // Kiểm tra phiên đăng nhập ngay khi mở trang
         checkSession();
-
+    
         async function checkSession() {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 showDashboard();
             } else {
                 showLogin();
             }
         }
-
+    
         // === 2. XỬ LÝ ĐĂNG NHẬP / ĐĂNG XUẤT ===
         async function handleLogin(e) {
             e.preventDefault();
@@ -132,12 +137,12 @@
             btnSubmit.innerText = "Đang xử lý...";
             btnSubmit.disabled = true;
             loginError.style.display = 'none';
-
-            const { data, error } = await supabase.auth.signInWithPassword({
+    
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
-
+    
             if (error) {
                 loginError.innerText = "Đăng nhập thất bại: " + error.message;
                 loginError.style.display = 'block';
@@ -147,104 +152,120 @@
                 showDashboard();
             }
         }
-
+    
         async function handleLogout() {
-            await supabase.auth.signOut();
+            await supabaseClient.auth.signOut();
             showLogin();
         }
-
+    
         function showLogin() {
             loginContainer.style.display = 'block';
             dashboardContainer.style.display = 'none';
             btnLogout.style.display = 'none';
         }
-
+    
         function showDashboard() {
             loginContainer.style.display = 'none';
             dashboardContainer.style.display = 'block';
             btnLogout.style.display = 'block';
             loadData(); // Tải dữ liệu bảng khi vào dashboard
         }
-
+    
         // === 3. LẤY DỮ LIỆU & RENDER BẢNG ===
         async function loadData() {
             loadingMsg.style.display = 'block';
             dataTableBody.innerHTML = "";
-
+    
             const keyword = document.getElementById('searchKeyword').value;
             const dept = document.getElementById('filterDept').value;
-
-            // Xây dựng query cơ bản
-            let query = supabase.from('dang_ky_sang_kien').select('*').order('created_at', { ascending: false });
-
-            // Thêm điều kiện lọc nếu Admin có nhập/chọn
-            if (dept) {
-                query = query.eq('tg1_don_vi', dept);
-            }
-            if (keyword) {
-                query = query.or(`ten_sang_kien.ilike.%${keyword}%,tg1_ho_ten.ilike.%${keyword}%`);
-            }
-
+    
+            // Dùng supabaseClient thay cho supabase
+            let query = supabaseClient.from('dang_ky_sang_kien').select('*').order('created_at', { ascending: false });
+    
+            if (dept) query = query.eq('tg1_don_vi', dept);
+            if (keyword) query = query.or(`ten_sang_kien.ilike.%${keyword}%,tg1_ho_ten.ilike.%${keyword}%`);
+    
             const { data, error } = await query;
             loadingMsg.style.display = 'none';
-
+    
             if (error) {
                 alert("Lỗi khi tải dữ liệu: " + error.message);
                 return;
             }
-
+    
             if (data.length === 0) {
-                dataTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Không có dữ liệu</td></tr>`;
+                dataTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center;">Không có dữ liệu</td></tr>`;
                 return;
             }
-
-            // Vẽ bảng
+    
             data.forEach((row, index) => {
                 const tr = document.createElement('tr');
                 
-                // Xử lý nút tải file (giả định file_dinh_kem là mảng URL hoặc File Path)
                 let fileHTML = '<i>Không có file</i>';
                 if (row.file_dinh_kem && row.file_dinh_kem.length > 0) {
-                    // Truyền đường dẫn file vào hàm tải file dạng Blob
-                    const filePath = row.file_dinh_kem[0]; // Lấy file đầu tiên làm ví dụ
+                    const filePath = row.file_dinh_kem[0];
                     fileHTML = `<button class="btn-download" onclick="downloadFile('${filePath}')">&#11119; Tải xuống</button>`;
                 }
-
+    
+                // Đổi màu chữ theo trạng thái
+                let statusColor = 'orange';
+                if (row.trang_thai === 'Đã duyệt') statusColor = 'green';
+                if (row.trang_thai === 'Từ chối') statusColor = 'red';
+    
+                // Thêm cột Thao tác (Nút Duyệt / Từ chối)
                 tr.innerHTML = `
                     <td>${index + 1}</td>
                     <td><strong>${row.ten_sang_kien || 'N/A'}</strong></td>
                     <td>${row.tg1_ho_ten || 'N/A'}</td>
                     <td>${row.tg1_don_vi || 'N/A'}</td>
-                    <td>${row.tg1_chuc_danh || 'N/A'}</td>
-                    <td><span style="color: ${row.trang_thai === 'Chờ duyệt' ? 'orange' : 'green'}; font-weight: bold;">${row.trang_thai || 'Mới'}</span></td>
+                    <td><span style="color: ${statusColor}; font-weight: bold;">${row.trang_thai || 'Chờ duyệt'}</span></td>
                     <td style="text-align: center;">${fileHTML}</td>
+                    <td style="text-align: center;">
+                        <button onclick="updateStatus('${row.id}', 'Đã duyệt')" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-bottom: 4px; width: 70px;">Duyệt</button><br>
+                        <button onclick="updateStatus('${row.id}', 'Từ chối')" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; width: 70px;">Từ chối</button>
+                    </td>
                 `;
                 dataTableBody.appendChild(tr);
             });
         }
-
-        // === 4. XỬ LÝ TẢI FILE DẠNG BLOB TỪ SUPABASE STORAGE ===
+    
+        // === 4. CẬP NHẬT TRẠNG THÁI ===
+        async function updateStatus(id, newStatus) {
+            if (!confirm(`Bạn có chắc chắn muốn chuyển hồ sơ này sang trạng thái: ${newStatus}?`)) {
+                return;
+            }
+    
+            // Dùng supabaseClient thay cho supabase
+            const { error } = await supabaseClient
+                .from('dang_ky_sang_kien')
+                .update({ trang_thai: newStatus })
+                .eq('id', id);
+    
+            if (error) {
+                alert("❌ Lỗi khi cập nhật: " + error.message);
+            } else {
+                alert("✅ Đã cập nhật trạng thái thành công!");
+                loadData(); // Tải lại bảng để thấy kết quả ngay
+            }
+        }
+    
+        // === 5. XỬ LÝ TẢI FILE DẠNG BLOB ===
         async function downloadFile(filePath) {
             try {
-                // Giả định bạn đã tạo một Storage Bucket tên là 'sang_kien_bucket'
-                const { data, error } = await supabase.storage
+                // Dùng supabaseClient thay cho supabase
+                const { data, error } = await supabaseClient.storage
                     .from('sang_kien_bucket')
                     .download(filePath);
-
+    
                 if (error) throw error;
-
-                // Tạo URL dạng Blob
+    
                 const blobUrl = URL.createObjectURL(data);
-                
-                // Tạo thẻ <a> ẩn để ép trình duyệt tải file về
                 const a = document.createElement('a');
                 a.href = blobUrl;
-                // Lấy tên file gốc (phần tử cuối sau dấu /)
                 a.download = filePath.split('/').pop() || 'tai_lieu_dinh_kem'; 
                 document.body.appendChild(a);
                 a.click();
                 
-                // Thu hồi bộ nhớ
                 URL.revokeObjectURL(blobUrl);
                 document.body.removeChild(a);
             } catch (error) {
