@@ -76,6 +76,8 @@
 			color: white;
 		}
     </style>
+	<!-- Nhúng thư viện Supabase JS từ CDN -->
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -375,61 +377,159 @@
     </div>
 
     <script>
-        // 1. Hàm chuyển đổi qua lại giữa các menu
-        function openTab(evt, tabName) {
-            let contentSections = document.getElementsByClassName("content-section");
-            for (let i = 0; i < contentSections.length; i++) {
-                contentSections[i].classList.remove("active");
-            }
-
-            let tabLinks = document.getElementsByClassName("tab-link");
-            for (let i = 0; i < tabLinks.length; i++) {
-                tabLinks[i].classList.remove("active");
-            }
-
-            document.getElementById(tabName).classList.add("active");
-            evt.currentTarget.classList.add("active");
-        }
-
-        // 2. Xử lý lưu form Đăng ký Sáng kiến
-        function handleInitiativeSubmit(event) {
-            event.preventDefault(); 
-            let title = document.getElementById("title").value;
-            alert("Chúc mừng! Đăng ký sáng kiến '" + title + "' đã được lưu trữ thành công!");
-            document.getElementById("initiativeForm").reset();
-            window.scrollTo(0, 0);
-        }
-
-        // 3. Hiển thị tên file khi người dùng chọn ở tab Đơn vị gửi hồ sơ
-        function showSelectedFiles() {
-            let fileInput = document.getElementById("fileInput");
-            let fileListDiv = document.getElementById("fileList");
-            fileListDiv.innerHTML = ""; 
-
-            if (fileInput.files.length > 0) {
-                fileListDiv.innerHTML = "<strong>File đã chọn:</strong><br>";
-                for (let i = 0; i < fileInput.files.length; i++) {
-                    fileListDiv.innerHTML += "- " + fileInput.files[i].name + "<br>";
-                }
-            }
-        }
-
-        // 4. Xử lý Gửi tệp ở tab Đơn vị gửi hồ sơ
-        function handleUploadSubmit(event) {
-            event.preventDefault(); 
-            let unit = document.getElementById("unitSelect").value;
-            let files = document.getElementById("fileInput").files;
-
-            if (files.length === 0) {
-                alert("Vui lòng chọn ít nhất 1 file hồ sơ trước khi gửi!");
-                return;
-            }
-
-            alert("Đã tải lên thành công " + files.length + " file hồ sơ cho đơn vị: " + unit);
-            document.getElementById("uploadDossierForm").reset();
-            document.getElementById("fileList").innerHTML = "";
-        }
-    </script>
+	    // === 1. KHỞI TẠO SUPABASE ===
+	    const SUPABASE_URL = 'https://vogkouunfpjyvyfhxduz.supabase.co'; // THAY URL CỦA BẠN
+	    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvZ2tvdXVuZnBqeXZ5Zmh4ZHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTY4MTgsImV4cCI6MjA5NTAzMjgxOH0.cV_TlEdF3a9HbBwaWnYujQ6GFbK4ZdRJhbyabhFSnKY'; // THAY ANON KEY CỦA BẠN
+	    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+	
+	    // === 2. CHUYỂN TAB (Giữ nguyên như cũ) ===
+	    function openTab(evt, tabName) {
+	        let contentSections = document.getElementsByClassName("content-section");
+	        for (let i = 0; i < contentSections.length; i++) {
+	            contentSections[i].classList.remove("active");
+	        }
+	        let tabLinks = document.getElementsByClassName("tab-link");
+	        for (let i = 0; i < tabLinks.length; i++) {
+	            tabLinks[i].classList.remove("active");
+	        }
+	        document.getElementById(tabName).classList.add("active");
+	        evt.currentTarget.classList.add("active");
+	    }
+	
+	    // Hiển thị tên file đính kèm Sáng kiến
+	    function showRegSelectedFiles() {
+	        let fileInput = document.getElementById("regFileInput");
+	        let fileListDiv = document.getElementById("regFileList");
+	        fileListDiv.innerHTML = ""; 
+	        if (fileInput.files.length > 0) {
+	            fileListDiv.innerHTML = "<strong>File đã chọn:</strong><br>";
+	            for (let i = 0; i < fileInput.files.length; i++) {
+	                fileListDiv.innerHTML += "- " + fileInput.files[i].name + "<br>";
+	            }
+	        }
+	    }
+	
+	    // === 3. XỬ LÝ SUBMIT FORM ĐĂNG KÝ VÀ LƯU VÀO SUPABASE ===
+	    async function handleInitiativeSubmit(event) {
+	        event.preventDefault(); 
+	        
+	        // Đổi trạng thái nút bấm để tránh click nhiều lần
+	        const submitBtn = event.target.querySelector('button[type="submit"]');
+	        const originalBtnText = submitBtn.innerHTML;
+	        submitBtn.innerHTML = "⏳ Đang xử lý...";
+	        submitBtn.disabled = true;
+	
+	        try {
+	            // Lấy dữ liệu file
+	            const fileInput = document.getElementById("regFileInput");
+	            let filePaths = [];
+	
+	            // A. UPLOAD FILE LÊN SUPABASE STORAGE (Bucket tên là: sang_kien_bucket)
+	            if (fileInput.files.length > 0) {
+	                const file = fileInput.files[0]; // Tạm xử lý 1 file, nếu multiple thì dùng vòng lặp
+	                
+	                // Tạo tên file ngẫu nhiên để không bị trùng (Timestamp_TenFile)
+	                const fileExt = file.name.split('.').pop();
+	                const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+	                const filePath = `tai_lieu/${fileName}`;
+	
+	                const { data: uploadData, error: uploadError } = await supabase.storage
+	                    .from('sang_kien_bucket')
+	                    .upload(filePath, file);
+	
+	                if (uploadError) throw uploadError;
+	                
+	                // Lưu lại đường dẫn file để ghi vào database
+	                filePaths.push(uploadData.path);
+	            }
+	
+	            // B. CHUẨN BỊ DỮ LIỆU TÁC GIẢ PHỤ (JSONB)
+	            let dongTacGia = [];
+	            
+	            const author2Name = document.getElementById("author2Name").value;
+	            if (author2Name) {
+	                dongTacGia.push({
+	                    ho_ten: author2Name,
+	                    chuc_danh: document.getElementById("author2Position").value,
+	                    don_vi: document.getElementById("author2Dept").value
+	                });
+	            }
+	
+	            const author3Name = document.getElementById("author3Name").value;
+	            if (author3Name) {
+	                dongTacGia.push({
+	                    ho_ten: author3Name,
+	                    chuc_danh: document.getElementById("author3Position").value,
+	                    don_vi: document.getElementById("author3Dept").value
+	                });
+	            }
+	
+	            // C. GHI DỮ LIỆU VÀO DATABASE BẢNG "dang_ky_sang_kien"
+	            const dbData = {
+	                email_lien_he: document.getElementById("contactEmail").value,
+	                ten_sang_kien: document.getElementById("title").value,
+	                linh_vuc_ap_dung: document.getElementById("fieldOfApplication").value,
+	                cap_de_nghi: document.getElementById("recognitionLevel").value,
+	                thuc_trang: document.getElementById("currentStatus").value,
+	                giai_phap: document.getElementById("solution").value,
+	                hieu_qua: document.getElementById("benefit").value,
+	                
+	                tg1_ho_ten: document.getElementById("author1Name").value,
+	                tg1_chuc_danh: document.getElementById("author1Position").value,
+	                tg1_don_vi: document.getElementById("author1Dept").value,
+	                
+	                dong_tac_gia: dongTacGia, // Mảng JSON
+	                file_dinh_kem: filePaths  // Mảng URL file
+	                // Mặc định trạng thái là 'Chờ duyệt' đã được set trong SQL
+	            };
+	
+	            const { data, error: insertError } = await supabase
+	                .from('dang_ky_sang_kien')
+	                .insert([dbData]);
+	
+	            if (insertError) throw insertError;
+	
+	            // D. HOÀN TẤT
+	            alert("✅ Chúc mừng! Đăng ký sáng kiến của bạn đã được gửi thành công!");
+	            document.getElementById("initiativeForm").reset();
+	            document.getElementById("regFileList").innerHTML = "";
+	            window.scrollTo(0, 0);
+	
+	        } catch (error) {
+	            console.error("Lỗi:", error);
+	            alert("❌ Có lỗi xảy ra trong quá trình gửi: " + error.message);
+	        } finally {
+	            // Khôi phục nút bấm
+	            submitBtn.innerHTML = originalBtnText;
+	            submitBtn.disabled = false;
+	        }
+	    }
+	
+	    // Hiển thị tên file ở Tab Hồ Sơ Đơn vị (Giữ nguyên)
+	    function showSelectedFiles() {
+	        let fileInput = document.getElementById("fileInput");
+	        let fileListDiv = document.getElementById("fileList");
+	        fileListDiv.innerHTML = ""; 
+	        if (fileInput.files.length > 0) {
+	            fileListDiv.innerHTML = "<strong>File đã chọn:</strong><br>";
+	            for (let i = 0; i < fileInput.files.length; i++) {
+	                fileListDiv.innerHTML += "- " + fileInput.files[i].name + "<br>";
+	            }
+	        }
+	    }
+	
+	    // Xử lý Gửi tệp ở tab Đơn vị gửi hồ sơ (Chưa kết nối DB, tạm giữ nguyên UI)
+	    function handleUploadSubmit(event) {
+	        event.preventDefault(); 
+	        let unit = document.getElementById("unitSelect").value;
+	        let files = document.getElementById("fileInput").files;
+	        if (files.length === 0) {
+	            alert("Vui lòng chọn ít nhất 1 file hồ sơ trước khi gửi!");
+	            return;
+	        }
+	        alert("Tính năng gửi Hồ sơ đơn vị đang được phát triển.");
+	    }
+	</script>
 
 </body>
 </html>
