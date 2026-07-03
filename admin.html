@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KBNN - Quản trị Hệ thống Sáng kiến</title>
+    <!-- Nhúng thư viện Supabase JS từ CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        header { background-color: #1a73e8; color: white; padding: 15px 20px; text-align: center; position: relative; }
+        .logout-btn { position: absolute; right: 20px; top: 20px; background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; display: none; }
+        .logout-btn:hover { background: #c82333; }
+        
+        /* Container Đăng nhập */
+        #loginContainer { max-width: 400px; margin: 80px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn-login { width: 100%; background: #1a73e8; color: white; border: none; padding: 12px; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-login:hover { background: #1557b0; }
+
+        /* Container Bảng điều khiển (Dashboard) */
+        #dashboardContainer { display: none; max-width: 1200px; margin: 30px auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .filter-bar { display: flex; gap: 15px; margin-bottom: 20px; }
+        .filter-bar input, .filter-bar select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; }
+        .btn-search { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-search:hover { background: #218838; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; border: 1px solid #dee2e6; text-align: left; }
+        th { background-color: #f8f9fa; color: #333; }
+        .btn-download { background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; }
+        .btn-download:hover { background: #138496; }
+        
+        .loading { text-align: center; font-style: italic; color: #666; display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>TRANG QUẢN TRỊ SÁNG KIẾN KBNN</h1>
+        <button id="btnLogout" class="logout-btn" onclick="handleLogout()">Đăng xuất</button>
+    </header>
+
+    <!-- MÀN HÌNH ĐĂNG NHẬP -->
+    <div id="loginContainer">
+        <h2 style="text-align: center; color: #1a73e8; margin-top: 0;">Admin Login</h2>
+        <div id="loginError" style="color: red; margin-bottom: 15px; font-size: 14px; text-align: center; display: none;"></div>
+        <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>Email Quản trị:</label>
+                <input type="email" id="email" required placeholder="admin@kbnn.vn">
+            </div>
+            <div class="form-group">
+                <label>Mật khẩu:</label>
+                <input type="password" id="password" required placeholder="********">
+            </div>
+            <button type="submit" class="btn-login" id="btnLoginSubmit">Đăng nhập</button>
+        </form>
+    </div>
+
+    <!-- MÀN HÌNH QUẢN TRỊ (Ẩn mặc định) -->
+    <div id="dashboardContainer">
+        <h2>Danh sách Đăng ký Sáng kiến</h2>
+        
+        <div class="filter-bar">
+            <input type="text" id="searchKeyword" placeholder="Tìm theo tên sáng kiến hoặc tác giả...">
+            <select id="filterDept">
+                <option value="">-- Tất cả đơn vị --</option>
+                <option value="Ban Công nghệ thông tin và Chuyển đổi số">Ban Công nghệ thông tin và Chuyển đổi số</option>
+                <option value="Ban Tài vụ - Quản trị">Ban Tài vụ - Quản trị</option>
+                <option value="Văn phòng">Văn phòng</option>
+                <!-- Thêm các đơn vị khác nếu cần -->
+            </select>
+            <button class="btn-search" onclick="loadData()">Lọc Dữ liệu</button>
+        </div>
+
+        <div id="loadingMsg" class="loading">Đang tải dữ liệu...</div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th width="5%">STT</th>
+                    <th width="25%">Tên Sáng kiến</th>
+                    <th width="15%">Đại diện Tác giả</th>
+                    <th width="20%">Đơn vị</th>
+                    <th width="10%">Chức vụ</th>
+                    <th width="15%">Trạng thái</th>
+                    <th width="10%" style="text-align: center;">Tài liệu</th>
+                </tr>
+            </thead>
+            <tbody id="dataTableBody">
+                <!-- Dữ liệu sẽ được render bằng JS vào đây -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // === 1. KHỞI TẠO SUPABASE ===
+        const SUPABASE_URL = 'https://vogkouunfpjyvyfhxduz.supabase.co'; // THAY URL CỦA BẠN
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvZ2tvdXVuZnBqeXZ5Zmh4ZHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTY4MTgsImV4cCI6MjA5NTAzMjgxOH0.cV_TlEdF3a9HbBwaWnYujQ6GFbK4ZdRJhbyabhFSnKY'; // THAY ANON KEY CỦA BẠN
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // UI Elements
+        const loginContainer = document.getElementById('loginContainer');
+        const dashboardContainer = document.getElementById('dashboardContainer');
+        const btnLogout = document.getElementById('btnLogout');
+        const dataTableBody = document.getElementById('dataTableBody');
+        const loadingMsg = document.getElementById('loadingMsg');
+        const loginError = document.getElementById('loginError');
+
+        // Kiểm tra phiên đăng nhập ngay khi mở trang
+        checkSession();
+
+        async function checkSession() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                showDashboard();
+            } else {
+                showLogin();
+            }
+        }
+
+        // === 2. XỬ LÝ ĐĂNG NHẬP / ĐĂNG XUẤT ===
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btnSubmit = document.getElementById('btnLoginSubmit');
+            
+            btnSubmit.innerText = "Đang xử lý...";
+            btnSubmit.disabled = true;
+            loginError.style.display = 'none';
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                loginError.innerText = "Đăng nhập thất bại: " + error.message;
+                loginError.style.display = 'block';
+                btnSubmit.innerText = "Đăng nhập";
+                btnSubmit.disabled = false;
+            } else {
+                showDashboard();
+            }
+        }
+
+        async function handleLogout() {
+            await supabase.auth.signOut();
+            showLogin();
+        }
+
+        function showLogin() {
+            loginContainer.style.display = 'block';
+            dashboardContainer.style.display = 'none';
+            btnLogout.style.display = 'none';
+        }
+
+        function showDashboard() {
+            loginContainer.style.display = 'none';
+            dashboardContainer.style.display = 'block';
+            btnLogout.style.display = 'block';
+            loadData(); // Tải dữ liệu bảng khi vào dashboard
+        }
+
+        // === 3. LẤY DỮ LIỆU & RENDER BẢNG ===
+        async function loadData() {
+            loadingMsg.style.display = 'block';
+            dataTableBody.innerHTML = "";
+
+            const keyword = document.getElementById('searchKeyword').value;
+            const dept = document.getElementById('filterDept').value;
+
+            // Xây dựng query cơ bản
+            let query = supabase.from('dang_ky_sang_kien').select('*').order('created_at', { ascending: false });
+
+            // Thêm điều kiện lọc nếu Admin có nhập/chọn
+            if (dept) {
+                query = query.eq('tg1_don_vi', dept);
+            }
+            if (keyword) {
+                query = query.or(`ten_sang_kien.ilike.%${keyword}%,tg1_ho_ten.ilike.%${keyword}%`);
+            }
+
+            const { data, error } = await query;
+            loadingMsg.style.display = 'none';
+
+            if (error) {
+                alert("Lỗi khi tải dữ liệu: " + error.message);
+                return;
+            }
+
+            if (data.length === 0) {
+                dataTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Không có dữ liệu</td></tr>`;
+                return;
+            }
+
+            // Vẽ bảng
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                
+                // Xử lý nút tải file (giả định file_dinh_kem là mảng URL hoặc File Path)
+                let fileHTML = '<i>Không có file</i>';
+                if (row.file_dinh_kem && row.file_dinh_kem.length > 0) {
+                    // Truyền đường dẫn file vào hàm tải file dạng Blob
+                    const filePath = row.file_dinh_kem[0]; // Lấy file đầu tiên làm ví dụ
+                    fileHTML = `<button class="btn-download" onclick="downloadFile('${filePath}')">&#11119; Tải xuống</button>`;
+                }
+
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${row.ten_sang_kien || 'N/A'}</strong></td>
+                    <td>${row.tg1_ho_ten || 'N/A'}</td>
+                    <td>${row.tg1_don_vi || 'N/A'}</td>
+                    <td>${row.tg1_chuc_danh || 'N/A'}</td>
+                    <td><span style="color: ${row.trang_thai === 'Chờ duyệt' ? 'orange' : 'green'}; font-weight: bold;">${row.trang_thai || 'Mới'}</span></td>
+                    <td style="text-align: center;">${fileHTML}</td>
+                `;
+                dataTableBody.appendChild(tr);
+            });
+        }
+
+        // === 4. XỬ LÝ TẢI FILE DẠNG BLOB TỪ SUPABASE STORAGE ===
+        async function downloadFile(filePath) {
+            try {
+                // Giả định bạn đã tạo một Storage Bucket tên là 'sang_kien_bucket'
+                const { data, error } = await supabase.storage
+                    .from('sang_kien_bucket')
+                    .download(filePath);
+
+                if (error) throw error;
+
+                // Tạo URL dạng Blob
+                const blobUrl = URL.createObjectURL(data);
+                
+                // Tạo thẻ <a> ẩn để ép trình duyệt tải file về
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                // Lấy tên file gốc (phần tử cuối sau dấu /)
+                a.download = filePath.split('/').pop() || 'tai_lieu_dinh_kem'; 
+                document.body.appendChild(a);
+                a.click();
+                
+                // Thu hồi bộ nhớ
+                URL.revokeObjectURL(blobUrl);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('Lỗi tải file:', error);
+                alert("Không thể tải file: " + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
